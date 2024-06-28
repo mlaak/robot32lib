@@ -1,5 +1,5 @@
 <?php 
-namespace Robot32lib/GPTlib;
+namespace Robot32lib\GPTlib;
 
 class GPTlib{
     private $url= "";
