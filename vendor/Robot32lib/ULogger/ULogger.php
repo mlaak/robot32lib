@@ -20,7 +20,7 @@ class ULogger{
 
         $filename = $time . "___" . microtime(true);
         $filename = str_replace(".", "_", $filename); // replace the decimal with an underscore
-        file_put_contents($BASE_DIR."/collected_data/chats/".$filename.".txt", "Model: $model\n\n"."Query:\n".$query."\n\n\nResult:\n".$response."\n\nCost:".$cost;
+        file_put_contents($BASE_DIR."/collected_data/chats/".$filename.".txt", "Model: $model\n\n"."Query:\n".$query."\n\n\nResult:\n".$response."\n\nCost:".$cost);
     
         if(isset($_ENV['R_USER_ID'])){
             $userid = $_ENV['R_USER_ID'];
