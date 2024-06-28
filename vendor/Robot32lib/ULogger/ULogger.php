@@ -25,7 +25,7 @@ class ULogger{
         if(isset($_ENV['R_USER_ID'])){
             $userid = $_ENV['R_USER_ID'];
             $l = "$currentTime,$tokens_in,$tokens_out,$response_id,$cost";
-            str_pad($l,$tokens_in+$tokens_out);
+            $l = str_pad($l,$tokens_in+$tokens_out);
             $l.="\n";
             if(!ctype_alnum($userid))exit("user id must be alphanumeric");
             file_put_contents($BASE_DIR."/working_data/tokensused/$userid.txt",$l,FILE_APPEND);    
