@@ -1,0 +1,39 @@
+<?php 
+namespace Robot32lib\ULogger;
+
+class ULogger{
+   
+    function __construct(){
+
+    }
+    
+    function log($query,$model,$response,$response_id,$tokens_in,$tokens_out,$cost){
+        global $BASE_DIR;
+        $currentTime = time();
+        $year = date('Y', $currentTime);
+        $month = date('m', $currentTime);
+        $day = date('d', $currentTime);
+        $hour = date('H', $currentTime);
+        $minute = date('i', $currentTime);
+        $second = date('s', $currentTime);
+        $time = "$year.$month.$day..$hour.$minute.$second";
+
+        $filename = $time . "___" . microtime(true);
+        $filename = str_replace(".", "_", $filename); // replace the decimal with an underscore
+        file_put_contents($BASE_DIR."/collected_data/chats/".$filename.".txt", "Model: $model\n\n"."Query:\n".$content."\n\n\nResult:\n".$r['text']."\n\nCost:".$r['cost']);
+    
+        if(isset($_ENV['R_USER_ID'])){
+            $userid = $_ENV['R_USER_ID'];
+            $l = "$currentTime,$tokens_in,$tokens_out,$response_id,$cost";
+            str_pad($l,$tokens_in+$tokens_out);
+            $l.="\n";
+            if(!ctype_alnum($userid))exit("user id must be alphanumeric");
+            file_put_contents($BASE_DIR."/working_data/tokensused/$userid.txt",$l,FILE_APPEND);    
+        }
+    
+    
+    
+    }
+    
+
+}
