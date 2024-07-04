@@ -2,7 +2,7 @@
 namespace Robot32lib\ULogger;
 
 class ULogger{
-    $base_dir = "";
+    private $base_dir = "";
     function __construct($base_dir){
         $this->base_dir = $base_dir;
     }
