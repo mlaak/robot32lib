@@ -61,8 +61,13 @@ class GPTlib{
         $response = curl_exec($ch);
   
         // ******************** CATCH ERRORS AND CLOSE CURL ************       
-        $error = curl_errno($ch) ? curl_error($ch) : "";
+        $error_no = curl_errno($ch);   
+        $error = $error_no ? curl_error($ch) : "";
         curl_close($ch);
+        
+        if($streaming_func!==null && trim($this->current_data)!=""){  
+             $this->processStreamingChunk("\n ",$streaming_func); //something left if buffer. Process that.
+        }
         
         // ******************* PROCESS AND PACK OUTPUT ******************
         if($streaming_func!==null){
@@ -82,9 +87,14 @@ class GPTlib{
                 if(isset($data['id']))$cost = $this->openrouterCost($data['id'],3);   
             }
         }
+        
+        if(isset($data['error'])){
+            $error = $data['error']['message'];
+            $error_no = $data['error']['code'];
+        }
 
         // ******************** RETURN ************************************
-        return ["json"=>$response,"text"=>$text,"data"=>$data,"cost"=>$cost,"error"=>$error];
+        return ["json"=>$response,"text"=>$text,"data"=>$data,"cost"=>$cost,"error"=>$error,"error_code"=>$error_no];
     }
     
 
@@ -119,8 +129,10 @@ class GPTlib{
             //echo $l."\n"; //if you want to see whats going on here
             $json_str = "";
             if(substr($l,0,5)=="data:") $json_str = substr($l,5);
-            if(substr(trim($json_str),0,1)=='{') $this->data_chunks[] = $json_str; 
+            if(substr($l,0,1)=="{") $json_str = $l;
             
+            if(substr(trim($json_str),0,1)=='{') $this->data_chunks[] = $json_str; 
+                   
             $json = json_decode($json_str,true);
             $streaming_func($json["choices"][0]['delta']['content'] ?? null,$json);
         }
