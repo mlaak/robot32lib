@@ -12,7 +12,7 @@ class GPTlib{
     
     public $please_calc_cost = false;
     
-    function __construct($url, $headers,$please_calc_cost=false){
+    function __construct($url, $headers = null,$please_calc_cost=false){
         $this->url = $url;
         $this->headers = $headers;
         $this->please_calc_cost = $please_calc_cost;
