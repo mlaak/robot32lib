@@ -2,6 +2,8 @@
 namespace Robot32lib\GPTlib;
 
 class GPTlib{
+
+    private $llm_try_list = [];
     private $url= "";
     private $headers = [];
     public $history = [];
@@ -13,8 +15,16 @@ class GPTlib{
     public $please_calc_cost = false;
     
     function __construct($url, $headers = null,$please_calc_cost=false){
-        $this->url = $url;
-        $this->headers = $headers;
+        if(is_array($url)){
+            $this->url = $url[0]['url'];
+            $this->headers = $url[0]['header'];
+            $this->llm_try_list = $this->url;
+        }
+        else {
+            $this->url = $url;
+            $this->headers = $headers;
+        }
+        
         $this->please_calc_cost = $please_calc_cost;
         $this->current_data = "";
     }
