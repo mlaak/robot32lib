@@ -18,7 +18,7 @@ class GPTlib{
     function __construct($url, $headers = null,$please_calc_cost=false){
         if(is_array($url)){
             $this->url = $url[0]['url'];
-            $this->headers = $url[0]['header'];
+            $this->headers = $url[0]['headers'];
             $this->llm_try_list = $this->url;
             $this->default_model = $url[0]['model'];
         }
