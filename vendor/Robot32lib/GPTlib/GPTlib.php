@@ -35,7 +35,7 @@ class GPTlib{
         $this->history = array_merge($prev, $this->fixHistory($history));
     }
 
-    funtions setOptions($options){
+    function setOptions($options){
         $this->options = $options;
     }
 
