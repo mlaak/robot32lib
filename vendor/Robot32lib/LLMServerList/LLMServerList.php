@@ -1,6 +1,10 @@
 <?php
 namespace Robot32lib\LLMServerList;
 
+//if(!in_array($model, ['mistralai/mixtral-8x7b-instruct',"mistralai/mixtral-8x22b-instruct"])){
+//    echo "Model not supported!";    
+//}
+
 class LLMServerList{
     function getLoginFor($type){
         if($type=="fast"){
@@ -10,7 +14,8 @@ class LLMServerList{
                 "Authorization: Bearer $OPENROUTER_API_KEY",
                 "Content-Type: application/json"
             ];
-            return [["url"=>$url,"headers"=>$headers]];
+            $model = "mistralai/mixtral-8x7b-instruct";
+            return [["url"=>$url,"headers"=>$headers,"model"=>$model]];
         }
         else if($type=="smart"){
             $url = "https://openrouter.ai/api/v1/chat/completions";
@@ -19,7 +24,8 @@ class LLMServerList{
                 "Authorization: Bearer $OPENROUTER_API_KEY",
                 "Content-Type: application/json"
             ];
-            return [["url"=>$url,"headers"=>$headers]];
+            $model = "mistralai/mixtral-8x7b-instruct";
+            return [["url"=>$url,"headers"=>$headers,"model"=>$model]];
 
         }
     }

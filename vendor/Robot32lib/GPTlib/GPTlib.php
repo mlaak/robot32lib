@@ -11,7 +11,8 @@ class GPTlib{
     private $current_data = "";
     private $data_chunks = [];
     
-    
+    private $default_model = "";
+    private $options = [];
     public $please_calc_cost = false;
     
     function __construct($url, $headers = null,$please_calc_cost=false){
@@ -19,6 +20,7 @@ class GPTlib{
             $this->url = $url[0]['url'];
             $this->headers = $url[0]['header'];
             $this->llm_try_list = $this->url;
+            $this->default_model = $url[0]['model'];
         }
         else {
             $this->url = $url;
@@ -32,17 +34,31 @@ class GPTlib{
     function setHistory($history, $prev = []){
         $this->history = array_merge($prev, $this->fixHistory($history));
     }
-    
-    function chat($query, $model, $options=[], $streaming_func=null){
 
+    funtions setOptions($options){
+        $this->options = $options;
+    }
+
+    function curl_init(){return curl_init();}
+    function curl_setopt($ch,$opt,$val){return curl_setopt($ch,$opt,$val);}
+    function curl_exec($ch){return curl_exec($ch);}
+    function curl_close($ch){return curl_close($ch);}
+    function curl_error($ch){return curl_error($ch);}
+    function curl_errno($ch){return curl_errno($ch);}
+    
+    function chat($query, $model=null, $options=[], $streaming_func=null){
+
+        if($model==null)$model = $this->default_model;
+        if($options==null || count($options)==0)$options = $this->options;
+        
         // ********************** INIT CURL ***************************
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $this->url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $this->headers);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        $ch = $this->curl_init();
+        $this->curl_setopt($ch, CURLOPT_URL, $this->url);
+        $this->curl_setopt($ch, CURLOPT_POST, 1);
+        $this->curl_setopt($ch, CURLOPT_HTTPHEADER, $this->headers);
+        $this->curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
+        $this->curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        $this->curl_setopt($ch, CURLOPT_TIMEOUT, 60);
        
        
         // *********************  QUERY AND HISTORY ********************* 
@@ -60,20 +76,20 @@ class GPTlib{
             $this->data_chunks = [];
             $this->current_data = "";
             
-            curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($curl, $chunk) use($streaming_func) { 
+            $this->curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($curl, $chunk) use($streaming_func) { 
                 $this->processStreamingChunk($chunk,$streaming_func);
                 return strlen($chunk); //required by CURLOPT_WRITEFUNCTION
             });    
         }
      
         // ******************** CURL EXECUTE *************************** 
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        $response = curl_exec($ch);
+        $this->curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        $response = $this->curl_exec($ch);
   
         // ******************** CATCH ERRORS AND CLOSE CURL ************       
-        $error_no = curl_errno($ch);   
-        $error = $error_no ? curl_error($ch) : "";
-        curl_close($ch);
+        $error_no = $this->curl_errno($ch);   
+        $error = $error_no ? $this->curl_error($ch) : "";
+        $this->curl_close($ch);
         
         if($streaming_func!==null && trim($this->current_data)!=""){  
              $this->processStreamingChunk("\n ",$streaming_func); //something left if buffer. Process that.
@@ -121,8 +137,6 @@ class GPTlib{
         return $data;
     }
     
-    
-    
     private function processStreamingChunk($chunk, $streaming_func){
         $this->current_data.=$chunk;
 
@@ -146,17 +160,11 @@ class GPTlib{
             $json = json_decode($json_str,true);
             $streaming_func($json["choices"][0]['delta']['content'] ?? null,$json);
         }
-
     }
-    
-    
-    
-    
     
     // like array_merge_recursive but will overwrite strings (if they are not empty)
     // $merge_content will force merging all the text for 'content' key
     private function mergeArrays($arr1,$arr2,$merge_content=false){
-        
         foreach($arr2 as $key=>$val){
             if(!array_key_exists($key,$arr1)){
                 $arr1[$key] = $val;
@@ -173,11 +181,9 @@ class GPTlib{
             else if(is_array($val) && is_array($arr1[$key])){
                 $arr1[$key] = $this->mergeArrays($arr1[$key],$val,$merge_content);
             }
-        }
-        
+        }    
         return $arr1;
     }
-    
     
     /*
         Take the chat history in a simple format and convert it to a format suitable for LLMs
@@ -234,29 +240,28 @@ class GPTlib{
                 $history[$key] = ["role" => $role,"content" => $content];
             }
         }     
-
         return $history;
     }
     
      public function openrouterCost($generation_id,$retry=0){
-        $ch = curl_init();
+        $ch = $this->curl_init();
         //yes link is hardcoded, it is a quick (but needed) addon. 
         //later (if it grows) you can seperate it to an addon module.       
-        curl_setopt($ch, CURLOPT_URL, "https://openrouter.ai/api/v1/generation?id=$generation_id");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $this->headers);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        $this->curl_setopt($ch, CURLOPT_URL, "https://openrouter.ai/api/v1/generation?id=$generation_id");
+        $this->curl_setopt($ch, CURLOPT_HTTPHEADER, $this->headers);
+        $this->curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
+        $this->curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        $this->curl_setopt($ch, CURLOPT_TIMEOUT, 60);
         
-        $response = curl_exec($ch);
+        $response = $this->curl_exec($ch);
  
         $error = "";
-        if (curl_errno($ch)) {
-            $error = curl_error($ch); //cant do billing without it, this might be bad, throw?
-            curl_close($ch);
+        if ($this->curl_errno($ch)) {
+            $error = $this->curl_error($ch); //cant do billing without it, this might be bad, throw?
+            $this->curl_close($ch);
             return null;
         }
-        curl_close($ch);
+        $this->curl_close($ch);
         
         $data = json_decode($response,TRUE);
         
