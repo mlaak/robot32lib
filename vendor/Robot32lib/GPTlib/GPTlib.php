@@ -30,10 +30,11 @@ class GPTlib{
     private $options = [];
     private $TEMP = [];
 
-    
+    private $partial = false;
 
     public $history = [];
     public $returned = [];
+    public $abort_on_user_abort = true;
     
     function __construct($url=null, $headers = null){
         if(is_array($url)){
@@ -53,6 +54,7 @@ class GPTlib{
         $this->history = array_merge($prev, $this->fixHistory($history));
     }
     function setOptions($options){ $this->options = $options; }
+    function setPartial($partial){ $this->partial = $partial; }
 
     function chat($query, $model=null, $options=[], $streaming_func=null){
         $modnr = 0; 
@@ -114,6 +116,13 @@ class GPTlib{
         $this->curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         $this->curl_setopt($ch, CURLOPT_TIMEOUT, 60);
        
+        curl_setopt($ch, CURLOPT_NOPROGRESS, false);
+        curl_setopt($ch, CURLOPT_PROGRESSFUNCTION, function($ch,$dload_size=0,$dloaded=0,$upl_size=0,$uloaded=0){
+            if($this->abort_on_user_abort && connection_aborted())return 1; //abort
+            else return 0;
+        });
+
+
        
         // *********************  QUERY AND HISTORY ********************* 
         $data = $options;
@@ -123,6 +132,9 @@ class GPTlib{
         $data[self::messages] = $this->history;
         if($query!==null && $query!==""){
             $data[self::messages][] = ["role" => "user","content" => $query];
+            if($this->partial!==false){
+                $data[self::messages][] = ["role" => "assistant","content" => $this->partial];
+            }
         }
         
         // ************* STREAMING (response comes in pieces) *******************
@@ -134,6 +146,7 @@ class GPTlib{
             $this->curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($curl, $chunk) use($streaming_func) { 
                 //this is called every time we get a partial response (piece) from server
                 $this->processStreamingChunk($chunk,$streaming_func);
+                
                 return strlen($chunk); //required by CURLOPT_WRITEFUNCTION
             });    
         }
@@ -239,7 +252,8 @@ class GPTlib{
             if(substr(trim($json_str),0,1)=='{') $this->data_chunks[] = $json_str; 
                    
             $json = json_decode($json_str,true);
-            $streaming_func($json[self::choices][0][self::delta][self::content] ?? null,$json);
+            $content = $json[self::choices][0][self::delta][self::content] ?? null;
+            $streaming_func($content,$json);
         }
     }
     
