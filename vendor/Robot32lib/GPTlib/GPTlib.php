@@ -2,20 +2,19 @@
 namespace Robot32lib\GPTlib;
 
 class GPTlib{
-
     private $llm_try_list = [];
     private $url= "";
     private $headers = [];
-    public $history = [];
-    
     private $current_data = "";
     private $data_chunks = [];
-    
     private $default_model = "";
     private $options = [];
-    public $please_calc_cost = false;
+    private $TEMP = [];
+
+    public $history = [];
+    public $returned = [];
     
-    function __construct($url, $headers = null,$please_calc_cost=false){
+    function __construct($url, $headers = null){
         if(is_array($url)){
             $this->url = $url[0]['url'];
             $this->headers = $url[0]['headers'];
@@ -26,33 +25,31 @@ class GPTlib{
             $this->url = $url;
             $this->headers = $headers;
         }
-        
-        $this->please_calc_cost = $please_calc_cost;
         $this->current_data = "";
     }
     
     function setHistory($history, $prev = []){
         $this->history = array_merge($prev, $this->fixHistory($history));
     }
+    function setOptions($options){ $this->options = $options; }
 
-    function setOptions($options){
-        $this->options = $options;
+    function chat($query, $model=null, $options=[], $streaming_func=null){
+        $ch = $this->chatStart($query, $model, $options, $streaming_func);
+        $response = $this->curl_exec($ch);
+        return $this->chatEnd($response,true);
     }
 
-    function curl_init(){return curl_init();}
-    function curl_setopt($ch,$opt,$val){return curl_setopt($ch,$opt,$val);}
-    function curl_exec($ch){return curl_exec($ch);}
-    function curl_close($ch){return curl_close($ch);}
-    function curl_error($ch){return curl_error($ch);}
-    function curl_errno($ch){return curl_errno($ch);}
-    
-    function chat($query, $model=null, $options=[], $streaming_func=null){
 
+    function chatStart($query, $model=null, $options=[], $streaming_func=null){
         if($model==null)$model = $this->default_model;
         if($options==null || count($options)==0)$options = $this->options;
-        
+        $this->TEMP = [];
+        $this->TEMP["streaming_func"] = $streaming_func;
+        $this->TEMP["options"] = $options;
+
         // ********************** INIT CURL ***************************
         $ch = $this->curl_init();
+        $this->TEMP["ch"] = $ch;
         $this->curl_setopt($ch, CURLOPT_URL, $this->url);
         $this->curl_setopt($ch, CURLOPT_POST, 1);
         $this->curl_setopt($ch, CURLOPT_HTTPHEADER, $this->headers);
@@ -64,39 +61,50 @@ class GPTlib{
         // *********************  QUERY AND HISTORY ********************* 
         $data = $options;
         $data["model"] = $model;       
+
+        //messages = history + current query
         $data['messages'] = $this->history;
-        
         if($query!==null && $query!==""){
             $data['messages'][] = ["role" => "user","content" => $query];
         }
         
-        // *********************** STREAMING *******************
+        // ************* STREAMING (response comes in pieces) *******************
         if($streaming_func!==null){  
             $data['stream'] = true;  
             $this->data_chunks = [];
             $this->current_data = "";
             
             $this->curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($curl, $chunk) use($streaming_func) { 
+                //this is called every time we get a partial response (piece) from server
                 $this->processStreamingChunk($chunk,$streaming_func);
                 return strlen($chunk); //required by CURLOPT_WRITEFUNCTION
             });    
         }
-     
-        // ******************** CURL EXECUTE *************************** 
+        
+        // *********************** CULR POSTFIELDS *******************
         $this->curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        $response = $this->curl_exec($ch);
-  
-        // ******************** CATCH ERRORS AND CLOSE CURL ************       
+        return $ch;
+    }
+
+    function chatEnd($response,$close_handle=true){
+
+        $ch = $this->TEMP["ch"];
+        $streaming_func = $this->TEMP["streaming_func"];
+
+        // ******************** CATCH HTTP ERRORS AND CLOSE CURL ************       
         $error_no = $this->curl_errno($ch);   
         $error = $error_no ? $this->curl_error($ch) : "";
-        $this->curl_close($ch);
+        if($close_handle)$this->curl_close($ch);
         
+        // ******************** CLEAN UP IF NEEDED *******************
         if($streaming_func!==null && trim($this->current_data)!=""){  
-             $this->processStreamingChunk("\n ",$streaming_func); //something left if buffer. Process that.
+             $this->processStreamingChunk("\n ",$streaming_func); //something left in buffer. Process that.
         }
         
-        // ******************* PROCESS AND PACK OUTPUT ******************
+        // ******************* PROCESS AND PACK RESULT ******************
         if($streaming_func!==null){
+            //lets combine the streaming partial responses
+            //so we get one response similar to non-streaming
             $response = "[".implode(",",$this->data_chunks)."]";            
             $data = $this->combineChunks($this->data_chunks);            
             $text = $data['choices'][0]['delta']['content'] ?? "";
@@ -105,29 +113,45 @@ class GPTlib{
             $data = @json_decode($response,TRUE);
             $text = $data['choices'][0]['message']['content'] ?? "";
         }
+
+        if(isset($data['error'])){ //response ok, but error returned in response
+            $error = $data['error']['message']; //could be out of money, etc..
+            $error_no = $data['error']['code'];
+        }
             
-        // ******************* CALCULATE COST *****************************
+        // ******************* CALCULATE COST IF DESIRED *****************************
         $cost = null;
-        if($this->please_calc_cost){
+        if(isset($this->TEMP['calc_cost']) && $this->TEMP['calc_cost']){
             if(substr($this->url, 0, strlen("https://openrouter.ai")) === "https://openrouter.ai"){
                 if(isset($data['id']))$cost = $this->openrouterCost($data['id'],3);   
             }
         }
         
-        if(isset($data['error'])){
-            $error = $data['error']['message'];
-            $error_no = $data['error']['code'];
-        }
-
         // ******************** RETURN ************************************
-        return ["json"=>$response,"text"=>$text,"data"=>$data,"cost"=>$cost,"error"=>$error,"error_code"=>$error_no];
+        $this->returned = [ "json"=>$response,
+                            "text"=>$text,
+                            "data"=>$data,
+                            "cost"=>$cost,
+                            "error"=>$error,
+                            "error_code"=>$error_no];
+        return $this->returned;
     }
+
     
+        
 
 /**********************************************************************************************************   
 ********************************************* HELPER FUNCTIONS ******************************************** 
 ***********************************************************************************************************/  
-    
+    //overwrite if you want to test for example
+    function curl_init(){return curl_init();}
+    function curl_setopt($ch,$opt,$val){return curl_setopt($ch,$opt,$val);}
+    function curl_exec($ch){return curl_exec($ch);}
+    function curl_close($ch){return curl_close($ch);}
+    function curl_error($ch){return curl_error($ch);}
+    function curl_errno($ch){return curl_errno($ch);}    
+
+
     private function combineChunks($chunks){
         $data = [];
         foreach($chunks as $j){ //with streaming, needed data is across many chunks, lets merge them 

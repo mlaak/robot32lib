@@ -19,7 +19,7 @@ if(isset($_REQUEST['r_ression_id']) || isset($_COOKIE['r_ression_id'])){
         $_ENV['R_USER_ID'] = trim($d[1]);
         if(!ctype_alnum($_ENV['R_USER_ID']))$_ENV['R_USER_ID']="";
         
-        $_ENV['R_USER_EMAIL'] = trim($d[2]);        
+        $_ENV['R_USER_EMAIL'] = @trim($d[2]);        
     }
 }
 
