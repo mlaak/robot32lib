@@ -21,7 +21,9 @@ class LLMServerList{
                 "Authorization: Bearer $OPENROUTER_API_KEY",
                 "Content-Type: application/json"
             ];
-            $model = "mistralai/mixtral-8x7b-instruct";
+            //$model = "mistralai/mixtral-8x7b-instruct";
+            $model = "mistralai/mistral-7b-instruct:nitro";
+
             $options =  [
                 "temperature"=> 1,  
                 "max_tokens"=> 8024,
