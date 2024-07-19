@@ -2,6 +2,25 @@
 namespace Robot32lib\GPTlib;
 
 class GPTlib{
+    const choices = 'choices';
+    const code = 'code';
+    const content = 'content';
+    const cost = 'cost';
+    const data = 'data';
+    const delta = 'delta';
+    const error = 'error';
+    const error_code = 'error_code';
+    const headers = 'headers';
+    const id = 'id';
+    const json = 'json';
+    const message = 'message';
+    const messages = 'messages';
+    const model = 'model';
+    const options = 'options';
+    const stream = 'stream';
+    const text = 'text';
+    const url = 'url';
+
     private $llm_try_list = [];
     private $url= "";
     private $headers = [];
@@ -11,15 +30,17 @@ class GPTlib{
     private $options = [];
     private $TEMP = [];
 
+    
+
     public $history = [];
     public $returned = [];
     
-    function __construct($url, $headers = null){
+    function __construct($url=null, $headers = null){
         if(is_array($url)){
-            $this->url = $url[0]['url'];
-            $this->headers = $url[0]['headers'];
+            $this->url = $url[0][self::url];
+            $this->headers = $url[0][self::headers];
             $this->llm_try_list = $this->url;
-            $this->default_model = $url[0]['model'];
+            $this->default_model = $url[0][self::model];
         }
         else {
             $this->url = $url;
@@ -34,25 +55,61 @@ class GPTlib{
     function setOptions($options){ $this->options = $options; }
 
     function chat($query, $model=null, $options=[], $streaming_func=null){
-        $ch = $this->chatStart($query, $model, $options, $streaming_func);
-        $response = $this->curl_exec($ch);
-        return $this->chatEnd($response,true);
+        $modnr = 0; 
+        while(true){
+            $ch = $this->chatStart($query, $model, $options, $streaming_func,$modnr);
+            $response = $this->curl_exec($ch);
+            $r = $this->chatEnd($response,true);
+
+            if($r[self::error_code] && is_array($model) && $modnr<count($model)-1){
+                $modnr++;
+                continue; //got error, lets try next model
+            } 
+            break;
+        }
+        return $r;
     }
 
 
-    function chatStart($query, $model=null, $options=[], $streaming_func=null){
+    function chatStart($query, $model=null, $options=[], $streaming_func=null,$modnr=0){
+        $url = $this->url;
+        $headers = $this->headers;
+
         if($model==null)$model = $this->default_model;
+       
         if($options==null || count($options)==0)$options = $this->options;
+        $opts = [];
+        $default = isset($model[$modnr][self::options]) ? $model[$modnr][self::options] : []; 
+
+        //!-means important option (use to force overwrite)
+        //!option over !default over option over default
+        foreach($default as $k=>$v)if($k[0]!="!")$opts[$k] = $v;
+        foreach($options as $k=>$v)if($k[0]!="!")$opts[$k] = $v;
+        foreach($default as $k=>$v)if($k[0]=="!")$opts[substr($k,1)] = $v;
+        foreach($options as $k=>$v)if($k[0]=="!")$opts[substr($k,1)] = $v;
+        $options = $opts;
+       
+        if(is_array($model)){
+            if(isset($model[$modnr][self::url]))$url = $model[$modnr][self::url];
+            if(isset($model[$modnr][self::headers]))$headers = $model[$modnr][self::headers];
+            if(isset($model[$modnr][self::model]))$model = $model[$modnr][self::model];
+        }
+
+        
+
+
+        
         $this->TEMP = [];
         $this->TEMP["streaming_func"] = $streaming_func;
         $this->TEMP["options"] = $options;
-
+        $this->TEMP["url"] = $url;
+ 
         // ********************** INIT CURL ***************************
         $ch = $this->curl_init();
         $this->TEMP["ch"] = $ch;
-        $this->curl_setopt($ch, CURLOPT_URL, $this->url);
+        $this->curl_setopt($ch, CURLOPT_URL, $url);
         $this->curl_setopt($ch, CURLOPT_POST, 1);
-        $this->curl_setopt($ch, CURLOPT_HTTPHEADER, $this->headers);
+        $this->curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         $this->curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
         $this->curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         $this->curl_setopt($ch, CURLOPT_TIMEOUT, 60);
@@ -60,17 +117,17 @@ class GPTlib{
        
         // *********************  QUERY AND HISTORY ********************* 
         $data = $options;
-        $data["model"] = $model;       
+        $data[self::model] = $model;       
 
         //messages = history + current query
-        $data['messages'] = $this->history;
+        $data[self::messages] = $this->history;
         if($query!==null && $query!==""){
-            $data['messages'][] = ["role" => "user","content" => $query];
+            $data[self::messages][] = ["role" => "user","content" => $query];
         }
         
         // ************* STREAMING (response comes in pieces) *******************
         if($streaming_func!==null){  
-            $data['stream'] = true;  
+            $data[self::stream] = true;  
             $this->data_chunks = [];
             $this->current_data = "";
             
@@ -107,33 +164,33 @@ class GPTlib{
             //so we get one response similar to non-streaming
             $response = "[".implode(",",$this->data_chunks)."]";            
             $data = $this->combineChunks($this->data_chunks);            
-            $text = $data['choices'][0]['delta']['content'] ?? "";
+            $text = $data[self::choices][0][self::delta][self::content] ?? "";
         }
         else {
             $data = @json_decode($response,TRUE);
-            $text = $data['choices'][0]['message']['content'] ?? "";
+            $text = $data[self::choices][0][self::message][self::content] ?? "";
         }
 
-        if(isset($data['error'])){ //response ok, but error returned in response
-            $error = $data['error']['message']; //could be out of money, etc..
-            $error_no = $data['error']['code'];
+        if(isset($data[self::error])){ //response ok, but error returned in response
+            $error = $data[self::error][self::message]; //could be out of money, etc..
+            $error_no = $data[self::error][self::code];
         }
             
         // ******************* CALCULATE COST IF DESIRED *****************************
         $cost = null;
         if(isset($this->TEMP['calc_cost']) && $this->TEMP['calc_cost']){
-            if(substr($this->url, 0, strlen("https://openrouter.ai")) === "https://openrouter.ai"){
+            if(substr($this->TEMP['url'], 0, strlen("https://openrouter.ai")) === "https://openrouter.ai"){
                 if(isset($data['id']))$cost = $this->openrouterCost($data['id'],3);   
             }
         }
         
         // ******************** RETURN ************************************
-        $this->returned = [ "json"=>$response,
-                            "text"=>$text,
-                            "data"=>$data,
-                            "cost"=>$cost,
-                            "error"=>$error,
-                            "error_code"=>$error_no];
+        $this->returned = [ self::json=>$response,
+                            self::text=>$text,
+                            self::data=>$data,
+                            self::cost=>$cost,
+                            self::error=>$error,
+                            self::error_code=>$error_no];
         return $this->returned;
     }
 
@@ -182,7 +239,7 @@ class GPTlib{
             if(substr(trim($json_str),0,1)=='{') $this->data_chunks[] = $json_str; 
                    
             $json = json_decode($json_str,true);
-            $streaming_func($json["choices"][0]['delta']['content'] ?? null,$json);
+            $streaming_func($json[self::choices][0][self::delta][self::content] ?? null,$json);
         }
     }
     
@@ -194,7 +251,7 @@ class GPTlib{
                 $arr1[$key] = $val;
             }
             else if(is_string($val) && $val!==""){
-                if($merge_content && $key=="content"){
+                if($merge_content && $key==self::content){
                     $arr1[$key].=$val;
                 }
                 else $arr1[$key] = $val;
