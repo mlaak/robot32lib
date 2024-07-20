@@ -1,0 +1,1 @@
+Code in under APACHE 2 license. Images are generated using sdxl-turbo - I claim no copyright on them. Stability AI might put some restrictions on them (like no training other AI-s on those or whatever). Consult google.
