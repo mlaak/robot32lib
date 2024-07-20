@@ -1,27 +1,27 @@
-HU - user wants to be told a joke
-WE - query about weather
-NE - current news
-    NETE - technology news
-EL - query relating to electronics or robotics
-    ELMI microcontrollers
-        ELMIPY programming in Micropython
-PR - computer programming
-    PRPY Python
-        PRO.PY.MIPY Micropython
-    PRPH PHP
-    PRJS Javascript
-        PRO.JS.CLI client (browser side) Javascript
-        PRO.JS.SER server side Javascript (for example Node)
-    PRJA Java
-    PRGO Golang
-    PRNE Microsoft C# or .NET
-    PRC C or C++
+H0 user wants to be told a joke
+W0 query about weather
+N0 current news
+    NT technology news
+E0 query relating to electronics or robotics
+    EM microcontrollers
+        EMY programming in Micropython
+P0 computer programming
+    PY Python
+        P Micropython
+    PP PHP
+    PJ Javascript
+        PJCL client (browser side) Javascript
+        PJSE server side Javascript (for example Node)
+    PJA Java
+    PG Golang
+    PN Microsoft C# or .NET
+    PC C or C++
         PRO.C.MIC C for microcontrollers
-    PRAI AI related programming    
-AI - AI related 
-    AIPR AI related programming
-    AIGE Other AI related inquiries    
-TE - Technology
-    TEGP Graphics cards
+    PA AI related programming    
+A0 AI related 
+    AP AI related programming
+    AG Other AI related inquiries    
+T0 Technology
+    TG Graphics cards
 
-GE - user made a general query that does not fit into other categories.
+G0 user made a general query that does not fit into other categories.
