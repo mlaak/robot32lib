@@ -13,7 +13,8 @@ class ImageSource{
             if(count($e)==3){
                 $this->files[$e[0]] = [$e[1],$e[2]];
             }
-        }               
+        }       
+
     }
     function getDataFromArchive($startByte, $length) {
         $filename = __DIR__."/pictures.archive";
@@ -21,6 +22,8 @@ class ImageSource{
         if ($file === false) {
             return false;
         }
+        //echo $startByte;
+        //echo " len:".$length."!" ;
         // Move the file pointer to the start byte
         fseek($file, $startByte, SEEK_SET);
         // Read the data from the file
@@ -30,10 +33,13 @@ class ImageSource{
     }
 
     function getPicture($name){
-        if(!isset($this->file[$name]))return null;
-        $start = $this->file[$name][0];
-        $len = $this->file[$name][1];
+        
+        if(!isset($this->files[$name]))return null;
+        
+        $start = $this->files[$name][1];
+        $len = $this->files[$name][0];
         $data = $this->getDataFromArchive($start,$len);        
+        return $data;
     }
 
     function getRandomPicture($name_contains=[]){
@@ -54,6 +60,6 @@ class ImageSource{
         }
         srand();
         $r = random_int(0,count($picture_pool)-1);
-        return getPicture( $picture_pool[$r]);
+        return $this->getPicture($picture_pool[$r]);
     }
 }
