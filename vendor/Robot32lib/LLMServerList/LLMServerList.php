@@ -22,7 +22,7 @@ class LLMServerList{
                 "Content-Type: application/json"
             ];
             //$model = "mistralai/mixtral-8x7b-instruct";
-            $model = "mistralai/mistral-7b-instruct:nitro";
+            $model = "mistralai/mistral-7b-instruct-v0.3";
 
             $options =  [
                 "temperature"=> 1,  
