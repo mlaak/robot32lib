@@ -29,7 +29,7 @@ class ClassTree {
     const GENERAL =             "G0"; // user made a general query that does not fit into other categories
 
     public function getTreeText(){
-        $t = file_get_contents(__DIR__."/clastree.txt");
+        $t = file_get_contents(__DIR__."/classtree.txt");
         $t = str_replace("\r\n","\n",$t); //windows
         $t = str_replace("\r","\n",$t); //mac
         $lines = explode("\n",$t);
