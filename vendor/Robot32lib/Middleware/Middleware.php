@@ -60,6 +60,7 @@ function TTD($message,...$params){
     for($x=1;$x<count($params);$x=$x+2){
         $original->P[$params[$x-1]] = $params[$x-1];
     }
+    $original->M = $message;
     if($TDD_c!==0){
         $json = json_encode($original);
         file_put_contents($BASE_DIR."/working_data/ttd/$TDD_c.txt",$json."\n",FILE_APPEND);
