@@ -35,3 +35,35 @@ if(!function_exists("rheaders_sent")){
     }        
 }
 
+$TDD_c = 0;
+
+function TDD_SET($c){
+    global $TDD_c;
+    $TDD_c = $c;
+}
+
+function TTD($message,...$params){
+    global $TDD_c,$BASE_DIR;
+    $dbt = debug_backtrace(2);
+    $original = new stdClass(); 
+    $o = $original;
+    foreach($dbt as $d){
+        $new =  new stdClass(); 
+        $o->parent = $new;
+        $o = $new;
+        $o->FN = basename($d["file"]);
+        $o->LN = $d["line"];
+        $o->Path = $d["file"];
+    }
+    $original =  $original -> parent;
+    $original->P = [];
+    for($x=1;$x<count($params);$x=$x+2){
+        $original->P[$params[$x-1]] = $params[$x-1];
+    }
+    if($TDD_c!==0){
+        $json = json_encode($original);
+        file_put_contents($BASE_DIR."/working_data/ttd/$TDD_c.txt",$json."\n",FILE_APPEND);
+    }
+
+
+}
