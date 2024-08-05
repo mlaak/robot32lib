@@ -60,16 +60,16 @@ function TTD($message,...$params){
     $original = new stdClass(); 
     $o = $original;
     foreach($dbt as $d){
-        if(basename($d["file"])=="Middleware.php")continue;
+        if(basename(@$d["file"])=="Middleware.php")continue;
 
         $new =  new stdClass(); 
         $o->parent = $new;
         $o = $new;
-        $o->FN = basename($d["file"]);
-        $o->LN = $d["line"];
+        $o->FN = basename(@$d["file"]);
+        $o->LN = @$d["line"];
         $o->M = "";
         $o->P = null;
-        $o->Path = $d["file"];
+        $o->Path = @$d["file"];
     }
     if(!isset($original->parent)){
         return;
