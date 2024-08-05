@@ -47,8 +47,15 @@ function TTD_INIT($c){
 
 }
 
+function TTX($v){
+    TTD("","v1",$v);
+    return $v;
+}
+
 function TTD($message,...$params){
     global $TDD_c,$BASE_DIR;
+    if($TDD_c===0)return;
+    
     $dbt = debug_backtrace(2);
     $original = new stdClass(); 
     $o = $original;
