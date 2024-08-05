@@ -40,6 +40,11 @@ $TDD_c = 0;
 function TTD_INIT($c){
     global $TDD_c;
     $TDD_c = $c;
+
+    register_tick_function(function(){
+        TTD("");
+    }, true);
+
 }
 
 function TTD($message,...$params){
@@ -48,6 +53,8 @@ function TTD($message,...$params){
     $original = new stdClass(); 
     $o = $original;
     foreach($dbt as $d){
+        if(basename($d["file"])=="Middleware.php")continue;
+
         $new =  new stdClass(); 
         $o->parent = $new;
         $o = $new;
@@ -56,6 +63,9 @@ function TTD($message,...$params){
         $o->M = "";
         $o->P = null;
         $o->Path = $d["file"];
+    }
+    if(!isset($original->parent)){
+        return;
     }
     $original =  $original -> parent;
     $original->P = [];
