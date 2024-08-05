@@ -37,7 +37,7 @@ if(!function_exists("rheaders_sent")){
 
 $TDD_c = 0;
 
-function TDD_SET($c){
+function TTD_INIT($c){
     global $TDD_c;
     $TDD_c = $c;
 }
@@ -53,6 +53,8 @@ function TTD($message,...$params){
         $o = $new;
         $o->FN = basename($d["file"]);
         $o->LN = $d["line"];
+        $o->M = "";
+        $o->P = null;
         $o->Path = $d["file"];
     }
     $original =  $original -> parent;
@@ -65,6 +67,4 @@ function TTD($message,...$params){
         $json = json_encode($original);
         file_put_contents($BASE_DIR."/working_data/ttd/$TDD_c.txt",$json."\n",FILE_APPEND);
     }
-
-
 }
