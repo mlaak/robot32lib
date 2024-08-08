@@ -52,7 +52,10 @@ function TTX($v){
     return $v;
 }
 
+
+$TTD_files_seen = [];
 function TTD($message,...$params){
+    global $TTD_files_seen;
     global $TDD_c,$BASE_DIR;
     if($TDD_c===0)return;
     
@@ -70,6 +73,10 @@ function TTD($message,...$params){
         $o->M = "";
         $o->P = null;
         $o->Path = @$d["file"];
+        if(!isset($TTD_files_seen[$o->Path])){
+            $o->Filedata = file_get_contents($o->Path);
+            $TTD_files_seen[$o->Path] = true;
+        }
     }
     if(!isset($original->parent)){
         return;
