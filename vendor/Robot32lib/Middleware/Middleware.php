@@ -66,7 +66,7 @@ function TTD($message,...$params){
         if(basename(@$d["file"])=="Middleware.php")continue;
 
         $new =  new stdClass(); 
-        $o->parent = $new;
+        $o->Parent = $new;
         $o = $new;
         $o->FN = basename(@$d["file"]);
         $o->LN = @$d["line"];
@@ -78,10 +78,10 @@ function TTD($message,...$params){
             $TTD_files_seen[$o->Path] = true;
         }*/
     }
-    if(!isset($original->parent)){
+    if(!isset($original->Parent)){
         return;
     }
-    $original =  $original -> parent;
+    $original =  $original -> Parent;
     $original->P = [];
     for($x=1;$x<count($params);$x=$x+2){
         $original->P[$params[$x-1]] = $params[$x];
