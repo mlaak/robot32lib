@@ -57,23 +57,31 @@ class GPTlib{
     function setPartial($partial){ $this->partial = $partial; }
 
     function chat($query, $model=null, $options=[], $streaming_func=null){
+        TTD("Chat");
         $modnr = 0; 
         while(true){
+            
             $ch = $this->chatStart($query, $model, $options, $streaming_func,$modnr);
-            $response = $this->curl_exec($ch);
+            $response = TTX( $this->curl_exec($ch) );                  
             $r = $this->chatEnd($response,true);
 
-            if($r[self::error_code] && is_array($model) && $modnr<count($model)-1){
-                $modnr++;
-                continue; //got error, lets try next model
-            } 
+            if($r[self::error_code]){
+                TTD("Got error","error code",$r[self::error_code]);
+
+                if(is_array($model) && $modnr<count($model)-1){
+                    $modnr++;   
+
+                    continue; //got error, lets try next model
+                } 
+            }
             break;
         }
-        return $r;
+        return TTX($r);
     }
 
 
     function chatStart($query, $model=null, $options=[], $streaming_func=null,$modnr=0){
+        TTD("chatStart","query",$query,"model",$model,"options",$options);
         $url = $this->url;
         $headers = $this->headers;
 
@@ -82,6 +90,7 @@ class GPTlib{
         if($options==null || count($options)==0)$options = $this->options;
         $opts = [];
         $default = isset($model[$modnr][self::options]) ? $model[$modnr][self::options] : []; 
+
 
         //!-means important option (use to force overwrite)
         //!option over !default over option over default
@@ -115,6 +124,9 @@ class GPTlib{
         $this->curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
         $this->curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         $this->curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        $this->curl_setopt($ch, CURLOPT_LOW_SPEED_LIMIT, 1);
+        $this->curl_setopt($ch, CURLOPT_LOW_SPEED_TIME, 5);
+        
        
         curl_setopt($ch, CURLOPT_NOPROGRESS, false);
         curl_setopt($ch, CURLOPT_PROGRESSFUNCTION, function($ch,$dload_size=0,$dloaded=0,$upl_size=0,$uloaded=0){
@@ -157,13 +169,13 @@ class GPTlib{
     }
 
     function chatEnd($response,$close_handle=true){
-
+        TTD("Chatend","response",$response);
         $ch = $this->TEMP["ch"];
         $streaming_func = $this->TEMP["streaming_func"];
 
         // ******************** CATCH HTTP ERRORS AND CLOSE CURL ************       
-        $error_no = $this->curl_errno($ch);   
-        $error = $error_no ? $this->curl_error($ch) : "";
+        $error_no = TTX( $this->curl_errno($ch) );   
+        $error = TTX( $error_no ? $this->curl_error($ch) : "" );
         if($close_handle)$this->curl_close($ch);
         
         // ******************** CLEAN UP IF NEEDED *******************
@@ -185,8 +197,8 @@ class GPTlib{
         }
 
         if(isset($data[self::error])){ //response ok, but error returned in response
-            $error = $data[self::error][self::message]; //could be out of money, etc..
-            $error_no = $data[self::error][self::code];
+            $error = TTX( $data[self::error][self::message] ); //could be out of money, etc..
+            $error_no = TTX( $data[self::error][self::code] );
         }
             
         // ******************* CALCULATE COST IF DESIRED *****************************
@@ -215,14 +227,30 @@ class GPTlib{
 ***********************************************************************************************************/  
     //overwrite if you want to test for example
     function curl_init(){return curl_init();}
-    function curl_setopt($ch,$opt,$val){return curl_setopt($ch,$opt,$val);}
-    function curl_exec($ch){return curl_exec($ch);}
-    function curl_close($ch){return curl_close($ch);}
-    function curl_error($ch){return curl_error($ch);}
-    function curl_errno($ch){return curl_errno($ch);}    
+    function curl_setopt($ch,$opt,$val){
+        TTD("CURL SETOPT","opt",$opt,"val",$val);
+        return curl_setopt($ch,$opt,$val);
+    }
+    function curl_exec($ch){
+        TTD("CURL EXEC");
+        return TTX(curl_exec($ch));
+    }
+    function curl_close($ch){
+        TTD("CURL CLOSE");
+        return curl_close($ch);
+    }
+    function curl_error($ch){
+        TTD("CURL ERROR");
+        return TTX(curl_error($ch));
+    }
+    function curl_errno($ch){
+        TTD("CURL ERRNO");
+        return TTX(curl_errno($ch));
+    }    
 
 
     private function combineChunks($chunks){
+        TTD("Combine chunks");
         $data = [];
         foreach($chunks as $j){ //with streaming, needed data is across many chunks, lets merge them 
                 $d = json_decode($j,TRUE);
@@ -232,6 +260,7 @@ class GPTlib{
     }
     
     private function processStreamingChunk($chunk, $streaming_func){
+        TTD("Processing Streamm Chunk");
         $this->current_data.=$chunk;
 
         $lines = explode("\n",$this->current_data);
@@ -244,6 +273,7 @@ class GPTlib{
         }
         
         foreach($lines as $l){
+            TTD("Line","l",$l);
             //echo $l."\n"; //if you want to see whats going on here
             $json_str = "";
             if(substr($l,0,5)=="data:") $json_str = substr($l,5);
@@ -252,7 +282,8 @@ class GPTlib{
             if(substr(trim($json_str),0,1)=='{') $this->data_chunks[] = $json_str; 
                    
             $json = json_decode($json_str,true);
-            $content = $json[self::choices][0][self::delta][self::content] ?? null;
+            $content = TTX( $json[self::choices][0][self::delta][self::content] ?? null );
+
             $streaming_func($content,$json);
         }
     }
@@ -299,6 +330,7 @@ class GPTlib{
        
       */
     private function fixHistory($history){
+        TTX("fixHistory","history",$history);
         if($history===null)return [];
         
         // convert xml or json or just a "chat;;chat;;chat" to an array
@@ -335,7 +367,7 @@ class GPTlib{
                 $history[$key] = ["role" => $role,"content" => $content];
             }
         }     
-        return $history;
+        return TTX($history);
     }
     
      public function openrouterCost($generation_id,$retry=0){
