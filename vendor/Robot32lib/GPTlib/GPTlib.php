@@ -284,7 +284,7 @@ class GPTlib{
             $json = json_decode($json_str,true);
             $content = TTX( $json[self::choices][0][self::delta][self::content] ?? null );
 
-            $streaming_func($content,$json);
+            if($content!==null && $content!=="")$streaming_func($content,$json);
         }
     }
     
