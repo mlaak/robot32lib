@@ -84,7 +84,7 @@ function TTD($message,...$params){
     $original =  $original -> parent;
     $original->P = [];
     for($x=1;$x<count($params);$x=$x+2){
-        $original->P[$params[$x-1]] = $params[$x-1];
+        $original->P[$params[$x-1]] = $params[$x];
     }
     $original->M = $message;
     if($TDD_c!==0){
